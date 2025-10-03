@@ -3,6 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { FiltersModule } from './filters/filters.module';
 
 @Module({
   imports: [
@@ -17,9 +18,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       synchronize: false, // ¡MUY IMPORTANTE! En 'false' para no modificar tu BD existente
     }),
     DashboardModule,
+    FiltersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
 // src/app.module.ts
+
+
