@@ -1,22 +1,36 @@
+// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { FiltersModule } from './filters/filters.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: 'localhost', // O '127.0.0.1'
-      port: 3306,
-      username: 'root',
-      password: '', // Sin contraseña
-      database: 'dbm', // El nombre de la BD del archivo .sql
-      entities: [], // Lo dejamos vacío por ahora, ya que usamos consultas SQL directas
-      synchronize: false, // ¡MUY IMPORTANTE! En 'false' para no modificar tu BD existente
+    // 1. Configura el módulo para leer el archivo .env
+    ConfigModule.forRoot({
+      isGlobal: true, // Lo hace disponible en toda la aplicación
     }),
+
+    // 2. Configura la conexión a la BD de forma segura
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USER'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+        entities: [],
+        synchronize: false,
+      }),
+    }),
+
+    // Tus otros módulos
     DashboardModule,
     FiltersModule,
   ],
@@ -24,6 +38,3 @@ import { FiltersModule } from './filters/filters.module';
   providers: [AppService],
 })
 export class AppModule {}
-// src/app.module.ts
-
-
