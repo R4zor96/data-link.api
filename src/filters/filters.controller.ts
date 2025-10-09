@@ -1,6 +1,5 @@
 // src/filters/filters.controller.ts
-
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { FiltersService } from './filters.service';
 
 @Controller('filters')
@@ -13,12 +12,12 @@ export class FiltersController {
   }
 
   @Get('distritos-locales')
-  getDistritosLocales() {
-    return this.filtersService.getDistritosLocales();
+  getDistritosLocales(@Query('id_distrito_federal') idDF?: string) {
+    return this.filtersService.getDistritosLocales(idDF);
   }
 
   @Get('municipios')
-  getMunicipios() {
-    return this.filtersService.getMunicipios();
+  getMunicipios(@Query('id_distrito_local') idDL?: string) {
+    return this.filtersService.getMunicipios(idDL);
   }
 }
