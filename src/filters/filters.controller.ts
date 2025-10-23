@@ -11,7 +11,8 @@ export class FiltersController {
   }
 
   @Get('distritos-federales')
-  getDistritosFederales(@Query('id_estado') idEstado?: string) { // Acepta id_estado
+  getDistritosFederales(@Query('id_estado') idEstado?: string) {
+    // Acepta id_estado
     return this.filtersService.getDistritosFederales(idEstado);
   }
 
@@ -33,5 +34,12 @@ export class FiltersController {
   @Get('comunidades') // Nueva ruta
   getComunidades(@Query('id_seccion') idSeccion?: string) {
     return this.filtersService.getComunidades(idSeccion);
+  }
+
+  // --- NUEVA RUTA ---
+  @Get('questions')
+  getQuestions(/* Podrías añadir @Query('id_encuesta') si necesitas filtrar */) {
+    // Pasamos un ID de encuesta fijo por ahora
+    return this.filtersService.getQuestions(9);
   }
 }

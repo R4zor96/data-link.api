@@ -25,12 +25,15 @@ export class FiltersService {
       whereClause = `WHERE id_estado = ?`;
       params.push(idEstado);
     }
-    return this.dataSource.query(`
+    return this.dataSource.query(
+      `
       SELECT id_distrito_federal AS id, nombre_distrito_federal AS nombre 
       FROM distritofederal 
       ${whereClause}
       ORDER BY nombre_distrito_federal ASC;
-    `, params);
+    `,
+      params,
+    );
   }
 
   async getDistritosLocales(idDF?: string) {
@@ -40,12 +43,15 @@ export class FiltersService {
       whereClause = `WHERE id_distrito_federal = ?`;
       params.push(idDF);
     }
-    return this.dataSource.query(`
+    return this.dataSource.query(
+      `
       SELECT id_distrito_local AS id, nombre_distrito_local AS nombre 
       FROM distritolocal 
       ${whereClause}
       ORDER BY CAST(SUBSTRING_INDEX(nombre_distrito_local, ' ', -1) AS UNSIGNED) ASC;
-    `, params);
+    `,
+      params,
+    );
   }
 
   async getMunicipios(idDL?: string) {
@@ -55,12 +61,15 @@ export class FiltersService {
       whereClause = `WHERE id_distrito_local = ?`;
       params.push(idDL);
     }
-    return this.dataSource.query(`
+    return this.dataSource.query(
+      `
       SELECT id_municipio AS id, nombre_municipio AS nombre 
       FROM municipio
       ${whereClause}
       ORDER BY nombre_municipio ASC;
-    `, params);
+    `,
+      params,
+    );
   }
 
   async getSecciones(idMunicipio?: string) {
@@ -70,12 +79,15 @@ export class FiltersService {
       whereClause = `WHERE id_municipio = ?`;
       params.push(idMunicipio);
     }
-    return this.dataSource.query(`
+    return this.dataSource.query(
+      `
       SELECT id_seccion AS id, nombre_seccion AS nombre 
       FROM seccion
       ${whereClause}
       ORDER BY CAST(nombre_seccion AS UNSIGNED) ASC; 
-    `, params);
+    `,
+      params,
+    );
   }
 
   async getComunidades(idSeccion?: string) {
@@ -85,11 +97,31 @@ export class FiltersService {
       whereClause = `WHERE id_seccion = ?`;
       params.push(idSeccion);
     }
-    return this.dataSource.query(`
+    return this.dataSource.query(
+      `
       SELECT id_comunidad AS id, nombre_comunidad AS nombre 
       FROM comunidades
       ${whereClause}
       ORDER BY nombre_comunidad ASC;
-    `, params);
+    `,
+      params,
+    );
+  }
+
+  // --- NUEVO MÉTODO ---
+  async getQuestions(
+    idEncuesta: number = 9,
+  ): Promise<{ id_pregunta: number; texto_pregunta: string }[]> {
+    // Asumimos id_encuesta=9 por ahora, podrías hacerlo dinámico
+    const params = [idEncuesta];
+    return this.dataSource.query(
+      `
+        SELECT id_pregunta, texto_pregunta 
+        FROM preguntas 
+        WHERE id_encuesta = ? 
+        ORDER BY id_pregunta ASC;
+     `,
+      params,
+    );
   }
 }

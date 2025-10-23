@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { DashboardQueryDto } from './dto/dashboard-query.dto';
+import { QuestionResultDto } from './dto/question-result.dto'; // Importa el nuevo DTO
 
 @Injectable()
 export class DashboardService {
@@ -191,5 +192,38 @@ export class DashboardService {
 
     const ubicaciones = await this.dataSource.query(ubicacionesQuery, params);
     return ubicaciones;
+  }
+
+  async getQuestionResults(
+    idPregunta: number,
+    filters: DashboardQueryDto,
+  ): Promise<QuestionResultDto[]> {
+    // Reutilizamos la lógica de filtros
+    const { clause, params: filterParams } = this.buildWhereClause(filters);
+
+    // Creamos los parámetros específicos para esta consulta
+    const queryParams = [idPregunta, ...filterParams];
+
+    const resultsQuery = `
+      SELECT 
+        o.texto_opcion AS label, 
+        COUNT(r.id_respuesta) AS value
+      FROM respuestas r
+      JOIN opciones o ON r.id_opcion = o.id_opcion
+      -- La condición base es id_pregunta
+      -- Se añaden los filtros dinámicos después
+      ${clause.replace('WHERE', 'WHERE r.id_pregunta = ? AND')} 
+      ${clause ? '' : 'WHERE r.id_pregunta = ?'}
+      GROUP BY o.texto_opcion
+      ORDER BY value DESC; 
+    `;
+
+    const results = await this.dataSource.query(resultsQuery, queryParams);
+
+    // Convertimos el 'value' (que viene como string) a número
+    return results.map((item) => ({
+      ...item,
+      value: parseInt(item.value, 10) || 0,
+    }));
   }
 }
