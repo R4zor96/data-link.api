@@ -1,4 +1,3 @@
-// src/filters/filters.controller.ts
 import { Controller, Get, Query } from '@nestjs/common';
 import { FiltersService } from './filters.service';
 
@@ -6,9 +5,14 @@ import { FiltersService } from './filters.service';
 export class FiltersController {
   constructor(private readonly filtersService: FiltersService) {}
 
+  @Get('estados')
+  getEstados() {
+    return this.filtersService.getEstados();
+  }
+
   @Get('distritos-federales')
-  getDistritosFederales() {
-    return this.filtersService.getDistritosFederales();
+  getDistritosFederales(@Query('id_estado') idEstado?: string) { // Acepta id_estado
+    return this.filtersService.getDistritosFederales(idEstado);
   }
 
   @Get('distritos-locales')
@@ -19,5 +23,15 @@ export class FiltersController {
   @Get('municipios')
   getMunicipios(@Query('id_distrito_local') idDL?: string) {
     return this.filtersService.getMunicipios(idDL);
+  }
+
+  @Get('secciones') // Nueva ruta
+  getSecciones(@Query('id_municipio') idMunicipio?: string) {
+    return this.filtersService.getSecciones(idMunicipio);
+  }
+
+  @Get('comunidades') // Nueva ruta
+  getComunidades(@Query('id_seccion') idSeccion?: string) {
+    return this.filtersService.getComunidades(idSeccion);
   }
 }

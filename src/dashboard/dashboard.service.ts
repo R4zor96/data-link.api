@@ -25,17 +25,30 @@ export class DashboardService {
     const conditions: string[] = [];
     const params: any[] = [];
 
-    if (filters.id_distrito_federal) {
+    // Añade las condiciones solo si el filtro existe y no es 'all'
+    if (filters.id_estado && filters.id_estado !== 'all') {
+      conditions.push(`${alias}.id_estado = ?`); // Asume que 'respuestas' tiene id_estado
+      params.push(filters.id_estado);
+    }
+    if (filters.id_distrito_federal && filters.id_distrito_federal !== 'all') {
       conditions.push(`${alias}.id_distritofederal = ?`);
       params.push(filters.id_distrito_federal);
     }
-    if (filters.id_distrito_local) {
+    if (filters.id_distrito_local && filters.id_distrito_local !== 'all') {
       conditions.push(`${alias}.id_distritolocal = ?`);
       params.push(filters.id_distrito_local);
     }
-    if (filters.id_municipio) {
+    if (filters.id_municipio && filters.id_municipio !== 'all') {
       conditions.push(`${alias}.id_municipio = ?`);
       params.push(filters.id_municipio);
+    }
+    if (filters.id_seccion && filters.id_seccion !== 'all') {
+      conditions.push(`${alias}.id_seccion = ?`);
+      params.push(filters.id_seccion);
+    }
+    if (filters.id_comunidad && filters.id_comunidad !== 'all') {
+      conditions.push(`${alias}.id_comunidad = ?`);
+      params.push(filters.id_comunidad);
     }
 
     const clause =
@@ -77,7 +90,7 @@ export class DashboardService {
       FROM respuestas r
       ${whereInfo.clause};
     `;
-    
+
     // 👇 LÓGICA CORREGIDA Y ROBUSTA USANDO EL HELPER 👇
     const generoQuery = `
       SELECT o.texto_opcion AS genero, COUNT(r.id_respuesta) AS total
@@ -87,9 +100,18 @@ export class DashboardService {
       GROUP BY o.texto_opcion;
     `;
 
-    const [totalEncuestas] = await this.dataSource.query(totalEncuestasQuery, whereInfo.params);
-    const [cobertura] = await this.dataSource.query(coberturaQuery, whereInfo.params);
-    const participacionGenero = await this.dataSource.query(generoQuery, whereInfo.params);
+    const [totalEncuestas] = await this.dataSource.query(
+      totalEncuestasQuery,
+      whereInfo.params,
+    );
+    const [cobertura] = await this.dataSource.query(
+      coberturaQuery,
+      whereInfo.params,
+    );
+    const participacionGenero = await this.dataSource.query(
+      generoQuery,
+      whereInfo.params,
+    );
 
     return {
       totalEncuestas: parseInt(totalEncuestas.total, 10),
