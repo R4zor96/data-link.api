@@ -1,9 +1,9 @@
-import { IsOptional, IsNumberString, IsString } from 'class-validator';
+import { IsOptional, IsNumberString, IsObject } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 /**
  * Helper para transformar el string JSON de los filtros en un objeto.
- * Si el string no es un JSON válido, devuelve un objeto vacío.
+ * Si el string no es un JSON válido, devuelve el string original para que falle la validación.
  */
 const TransformJsonString = () => Transform(({ value }) => {
   if (typeof value !== 'string' || value === '') {
@@ -12,7 +12,7 @@ const TransformJsonString = () => Transform(({ value }) => {
   try {
     return JSON.parse(value);
   } catch (e) {
-    return {}; // Devuelve objeto vacío si el parseo falla
+    return value; // Devuelve el string original si falla el parseo
   }
 });
 
@@ -22,40 +22,17 @@ const TransformJsonString = () => Transform(({ value }) => {
  */
 export class DashboardQueryDto {
   // --- Filtros Geográficos ---
-
-  @IsOptional()
-  @IsNumberString()
-  id_estado?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  id_distrito_federal?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  id_distrito_local?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  id_municipio?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  id_seccion?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  id_comunidad?: string;
+  @IsOptional() @IsNumberString() id_estado?: string;
+  @IsOptional() @IsNumberString() id_distrito_federal?: string;
+  @IsOptional() @IsNumberString() id_distrito_local?: string;
+  @IsOptional() @IsNumberString() id_municipio?: string;
+  @IsOptional() @IsNumberString() id_seccion?: string;
+  @IsOptional() @IsNumberString() id_comunidad?: string;
 
   // --- Filtros Dinámicos de Respuestas ---
-
-  /**
-   * Recibe un string codificado en JSON para los filtros de respuestas.
-   * Ejemplo: '{"31":["126","127"],"32":["139"]}'
-   * (Pregunta 31 con opciones 126 O 127) Y (Pregunta 32 con opción 139)
-   */
+  
   @IsOptional()
-  @IsString() // Recibe un string desde la URL
-  @TransformJsonString() // Transforma el string a un objeto
-  answerFilters?: { [questionId: string]: string[] }; // Se convierte en: { "31": ["126", "127"], ... }
+  @TransformJsonString() // 1. Transforma el string JSON en un objeto
+  @IsObject()           // 2. Valida que el resultado SEA un objeto
+  answerFilters?: { [questionId: string]: string[] };
 }

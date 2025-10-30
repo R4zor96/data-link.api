@@ -1,23 +1,35 @@
+// src/main.ts (en tu proyecto NestJS)
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ConfigService } from '@nestjs/config'; // 👈 Importa ConfigService
+import { ConfigService } from '@nestjs/config';
+import { ValidationPipe } from '@nestjs/common'; // 👈 1. Asegúrate de importar ValidationPipe
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 👇 Configuración de CORS con variable de entorno 👇
-  const configService = app.get(ConfigService); // Obtén el servicio de configuración
+  // 👇 2. AÑADE ESTE BLOQUE COMPLETO 👇
+  // Habilita la validación y transformación global de DTOs
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true, // <-- Esta es la línea mágica que faltaba
+    whitelist: true, // Opcional: elimina propiedades que no estén en el DTO
+    transformOptions: {
+      enableImplicitConversion: true, // Ayuda a convertir tipos
+    },
+  }));
+
+  // 3. Tu configuración de CORS (está bien)
+  const configService = app.get(ConfigService);
   const allowedOrigins = configService.get<string>('CORS_ORIGINS');
 
   if (allowedOrigins) {
-    const originsArray = allowedOrigins.split(','); // Separa las URLs por coma
+    const originsArray = allowedOrigins.split(',');
     app.enableCors({
-      origin: originsArray, // Pasa el array de orígenes permitidos
+      origin: originsArray,
     });
-    console.log('CORS habilitado para:', originsArray); // Mensaje de confirmación
+    console.log('CORS habilitado para:', originsArray);
   } else {
-    console.warn('Advertencia: No se encontró la variable CORS_ORIGINS en .env. CORS podría no estar configurado correctamente.');
-    // Opcional: Habilitar un origen por defecto o solo localhost si no se encuentra
+    console.warn('Advertencia: No se encontró la variable CORS_ORIGINS en .env.');
     app.enableCors({ origin: 'http://localhost:4200' }); 
   }
 
