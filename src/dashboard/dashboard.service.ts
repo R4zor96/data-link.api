@@ -56,23 +56,18 @@ export class DashboardService {
   /**
    * Construye la subconsulta principal que identifica a los encuestados
    * que cumplen TODOS los filtros (geográficos y de respuestas).
-   * Devuelve el string de la subconsulta (ej. "IN (SELECT ...)") y sus parámetros.
    */
   private buildFilteredEncuestadosSubquery(
     filters: DashboardQueryDto,
-    mainAlias: string = 'r', // Alias de la tabla principal (ej. 'r' o 'respuestas')
+    mainAlias: string = 'r',
   ): { subQueryClause: string; params: any[] } {
-    // 1. Obtener filtros geográficos
     const { clause: geoClause, params: geoParams } = this.buildGeoFilterClause(
       filters,
       'rr',
-    ); // 'rr' es el alias de la subconsulta
-
-    // 2. Obtener filtros de respuestas
+    );
     const answerFilters = filters.answerFilters || {};
     const answerFilterEntries = Object.entries(answerFilters);
 
-    // Si no hay ningún filtro, no se necesita subconsulta
     if (geoParams.length === 0 && answerFilterEntries.length === 0) {
       return { subQueryClause: '', params: [] };
     }
@@ -86,13 +81,11 @@ export class DashboardService {
     const subQueryConditions: string[] = [];
     const subQueryParams: any[] = [];
 
-    // 3. Añadir filtros geográficos a la subconsulta
     if (geoParams.length > 0) {
       subQueryConditions.push(geoClause.substring(6)); // Quita 'WHERE '
       subQueryParams.push(...geoParams);
     }
 
-    // 4. Añadir filtros de respuesta a la subconsulta
     answerFilterEntries.forEach(([questionId, optionIds], index) => {
       if (optionIds && optionIds.length > 0) {
         const placeholders = optionIds.map(() => '?').join(',');
@@ -110,24 +103,38 @@ export class DashboardService {
       }
     });
 
-    // 5. Unir condiciones y cerrar subconsulta
     if (subQueryConditions.length > 0) {
-      subQuery += ` WHERE ${subQueryConditions.join(' AND ')} )`; // Cierra el WHERE y el IN
+      subQuery += ` WHERE ${subQueryConditions.join(' AND ')} )`;
     } else {
-      subQuery += ` )`; // Cierra el IN (aunque no debería llegar aquí si la lógica inicial es correcta)
+      subQuery += ` )`; // Cierra el IN () si solo había geo (aunque ya se cubrió arriba)
     }
 
     return { subQueryClause: subQuery, params: subQueryParams };
   }
 
+  /**
+   * Une de forma segura las condiciones base de una consulta con los filtros opcionales.
+   */
+  private buildQueryConditions(
+    baseConditions: string[],
+    whereInfo: { clause: string; params: any[] },
+  ): string {
+    const allConditions = [...baseConditions];
+    if (whereInfo.clause) {
+      const filterConditions = whereInfo.clause.replace('WHERE ', 'AND ');
+      allConditions.push(filterConditions);
+    }
+    // Si la cláusula de filtros está vacía, solo usa las condiciones base
+    // Si no, une la base + "AND" + filtros
+    return `WHERE ${allConditions.join(' ')}`;
+  }
+
   // --- MÉTODOS DE ENDPOINT ACTUALIZADOS ---
 
   async getKpisGenerales(filters: DashboardQueryDto) {
-    // 1. Obtener la subconsulta de filtros
     const { subQueryClause, params: subQueryParams } =
       this.buildFilteredEncuestadosSubquery(filters, 'r');
 
-    // 2. Construir consultas principales
     const totalEncuestasQuery = `
       SELECT COUNT(*) AS total
       FROM (
@@ -145,16 +152,18 @@ export class DashboardService {
       ${subQueryClause};
     `;
 
-    // Consulta de género (pregunta 30)
+    // Consulta de género (pregunta 30) - LÓGICA CORREGIDA
     const generoQuery = `
       SELECT o.texto_opcion AS genero, COUNT(r.id_respuesta) AS total
       FROM respuestas r
       JOIN opciones o ON r.id_opcion = o.id_opcion
       WHERE r.id_pregunta = 30
-      ${subQueryClause.replace('WHERE', 'AND')} 
-      GROUP BY o.texto_opcion;
+      ${subQueryClause.replace('WHERE', 'AND')} GROUP BY o.texto_opcion;
     `;
-    // Nota: los parámetros de la subconsulta se pasan a cada query
+
+    // Si subQueryClause está vacío, el replace no hace nada y la consulta es correcta.
+    // Si subQueryClause tiene "WHERE ...", se reemplaza con "AND ..." y la consulta es correcta.
+
     const [totalEncuestas] = await this.dataSource.query(
       totalEncuestasQuery,
       subQueryParams,
@@ -169,10 +178,11 @@ export class DashboardService {
     );
 
     return {
-      totalEncuestas: parseInt(totalEncuestas.total, 10),
+      totalEncuestas: parseInt(totalEncuestas.total, 10) || 0,
       cobertura: {
-        municipios: parseInt(cobertura.municipiosCubiertos, 10),
-        distritosLocales: parseInt(cobertura.distritosLocalesCubiertos, 10),
+        municipios: parseInt(cobertura.municipiosCubiertos, 10) || 0,
+        distritosLocales:
+          parseInt(cobertura.distritosLocalesCubiertos, 10) || 0,
       },
       participacionGenero: participacionGenero.map((item) => ({
         ...item,
@@ -182,13 +192,11 @@ export class DashboardService {
   }
 
   async getUbicaciones(filters: DashboardQueryDto) {
-    // 1. Obtener la subconsulta de filtros
     const { subQueryClause, params } = this.buildFilteredEncuestadosSubquery(
       filters,
       'respuestas',
     );
 
-    // 2. Construir consulta principal
     const ubicacionesQuery = `
       SELECT DISTINCT mu.latitud, mu.longitud
       FROM respuestas
@@ -208,11 +216,9 @@ export class DashboardService {
     idPregunta: number,
     filters: DashboardQueryDto,
   ): Promise<QuestionResultDto[]> {
-    // 1. Obtener la subconsulta de filtros
     const { subQueryClause, params: subQueryParams } =
       this.buildFilteredEncuestadosSubquery(filters, 'r');
 
-    // 2. Construir consulta principal
     let mainQuery = `
       SELECT
         o.texto_opcion AS label,
@@ -221,25 +227,20 @@ export class DashboardService {
       JOIN opciones o ON r.id_opcion = o.id_opcion
     `;
 
-    // 3. Añadir condición de la pregunta
     const whereConditions: string[] = [`r.id_pregunta = ?`];
     const queryParams: any[] = [idPregunta];
 
-    // 4. Añadir la subconsulta (si existe)
     if (subQueryClause) {
-      mainQuery += ` ${subQueryClause} AND ${whereConditions[0]}`; // Añade subconsulta Y condición de pregunta
-      queryParams.push(...subQueryParams); // Añade parámetros de la subconsulta
+      mainQuery += ` ${subQueryClause} AND ${whereConditions[0]}`;
+      queryParams.push(...subQueryParams);
     } else {
-      mainQuery += ` WHERE ${whereConditions[0]}`; // Solo condición de pregunta
+      mainQuery += ` WHERE ${whereConditions[0]}`;
     }
 
     mainQuery += `
       GROUP BY o.texto_opcion
       ORDER BY value DESC;
     `;
-
-    // console.log('Generated SQL:', mainQuery); // Para depuración
-    // console.log('Query Params:', queryParams); // Para depuración
 
     try {
       const results = await this.dataSource.query(mainQuery, queryParams);
@@ -249,9 +250,10 @@ export class DashboardService {
       }));
     } catch (error) {
       console.error('Error executing dynamic filter query:', error);
-      console.error('SQL:', mainQuery);
-      console.error('Params:', queryParams);
       throw error;
     }
   }
+
+  // --- MÉTODOS OBSOLETOS ELIMINADOS ---
+  // getGraficosDemograficos y getPreferencias se han eliminado
 }
