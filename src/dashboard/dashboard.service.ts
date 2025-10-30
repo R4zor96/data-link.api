@@ -199,6 +199,7 @@ export class DashboardService {
     idPregunta: number,
     filters: DashboardQueryDto,
   ): Promise<QuestionResultDto[]> {
+    // 1. Obtener la subconsulta de filtros (esto está bien)
     const { subQueryClause, params: subQueryParams } =
       this.buildFilteredEncuestadosSubquery(filters, 'r');
 
@@ -210,20 +211,35 @@ export class DashboardService {
       JOIN opciones o ON r.id_opcion = o.id_opcion
     `;
 
-    const whereConditions: string[] = [`r.id_pregunta = ?`];
-    const queryParams: any[] = [idPregunta];
+    // --- 👇 INICIO DE LA CORRECCIÓN 👇 ---
+
+    // 2. Empezar el array de parámetros con los de la subconsulta
+    const queryParams: any[] = [...subQueryParams];
+
+    // 3. Definir la condición de la pregunta principal
+    const mainCondition: string = `r.id_pregunta = ?`;
+
+    // 4. Añadir el parámetro de la pregunta principal AL FINAL
+    queryParams.push(idPregunta);
 
     if (subQueryClause) {
-      mainQuery += ` ${subQueryClause} AND ${whereConditions[0]}`;
-      queryParams.push(...subQueryParams);
+      // 5. Construir la consulta con la subconsulta Y la condición principal
+      mainQuery += ` ${subQueryClause} AND ${mainCondition}`;
     } else {
-      mainQuery += ` WHERE ${whereConditions[0]}`;
+      // 6. Construir la consulta solo con la condición principal
+      mainQuery += ` WHERE ${mainCondition}`;
     }
+
+    // --- 👆 FIN DE LA CORRECCIÓN 👆 ---
 
     mainQuery += `
       GROUP BY o.texto_opcion
       ORDER BY value DESC;
     `;
+
+    // Dejamos los logs para depuración
+    console.log('Generated SQL:', mainQuery);
+    console.log('Query Params:', queryParams);
 
     try {
       const results = await this.dataSource.query(mainQuery, queryParams);
