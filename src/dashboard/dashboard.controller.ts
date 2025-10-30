@@ -12,16 +12,6 @@ export class DashboardController {
     return this.dashboardService.getKpisGenerales(filters);
   }
 
-  @Get('graficos-demograficos')
-  getGraficosDemograficos(@Query() filters: DashboardQueryDto) {
-    return this.dashboardService.getGraficosDemograficos(filters);
-  }
-  
-  @Get('preferencias')
-  getPreferencias(@Query() filters: DashboardQueryDto) {
-    return this.dashboardService.getPreferencias(filters);
-  }
-
   @Get('ubicaciones')
   getUbicaciones(@Query() filters: DashboardQueryDto) {
     return this.dashboardService.getUbicaciones(filters);
