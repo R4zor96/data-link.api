@@ -1,4 +1,4 @@
-// src/dashboard/dashboard.service.ts
+// src/dashboard/dashboard.service.ts (BACKEND - NESTJS)
 
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
@@ -18,7 +18,7 @@ export class DashboardService {
    */
   private buildGeoFilterClause(
     filters: DashboardQueryDto,
-    alias: string = 'r',
+    alias: string = 'rr', // Alias por defecto para la subconsulta
   ): { clause: string; params: any[] } {
     const conditions: string[] = [];
     const params: any[] = [];
@@ -59,15 +59,16 @@ export class DashboardService {
    */
   private buildFilteredEncuestadosSubquery(
     filters: DashboardQueryDto,
-    mainAlias: string = 'r',
+    mainAlias: string = 'r', // Alias de la tabla principal (ej. 'r' o 'respuestas')
   ): { subQueryClause: string; params: any[] } {
     const { clause: geoClause, params: geoParams } = this.buildGeoFilterClause(
       filters,
       'rr',
-    );
+    ); // 'rr' es el alias de la subconsulta
     const answerFilters = filters.answerFilters || {};
     const answerFilterEntries = Object.entries(answerFilters);
 
+    // Si no hay ningún filtro, no se necesita subconsulta
     if (geoParams.length === 0 && answerFilterEntries.length === 0) {
       return { subQueryClause: '', params: [] };
     }
@@ -81,11 +82,13 @@ export class DashboardService {
     const subQueryConditions: string[] = [];
     const subQueryParams: any[] = [];
 
+    // Añadir filtros geográficos a la subconsulta
     if (geoParams.length > 0) {
       subQueryConditions.push(geoClause.substring(6)); // Quita 'WHERE '
       subQueryParams.push(...geoParams);
     }
 
+    // Añadir filtros de respuesta a la subconsulta
     answerFilterEntries.forEach(([questionId, optionIds], index) => {
       if (optionIds && optionIds.length > 0) {
         const placeholders = optionIds.map(() => '?').join(',');
@@ -103,30 +106,14 @@ export class DashboardService {
       }
     });
 
+    // Unir condiciones y cerrar subconsulta
     if (subQueryConditions.length > 0) {
-      subQuery += ` WHERE ${subQueryConditions.join(' AND ')} )`;
+      subQuery += ` WHERE ${subQueryConditions.join(' AND ')} )`; // Cierra el WHERE y el IN
     } else {
-      subQuery += ` )`; // Cierra el IN () si solo había geo (aunque ya se cubrió arriba)
+      subQuery += ` )`; // Cierra el IN (caso improbable, pero seguro)
     }
 
     return { subQueryClause: subQuery, params: subQueryParams };
-  }
-
-  /**
-   * Une de forma segura las condiciones base de una consulta con los filtros opcionales.
-   */
-  private buildQueryConditions(
-    baseConditions: string[],
-    whereInfo: { clause: string; params: any[] },
-  ): string {
-    const allConditions = [...baseConditions];
-    if (whereInfo.clause) {
-      const filterConditions = whereInfo.clause.replace('WHERE ', 'AND ');
-      allConditions.push(filterConditions);
-    }
-    // Si la cláusula de filtros está vacía, solo usa las condiciones base
-    // Si no, une la base + "AND" + filtros
-    return `WHERE ${allConditions.join(' ')}`;
   }
 
   // --- MÉTODOS DE ENDPOINT ACTUALIZADOS ---
@@ -152,7 +139,6 @@ export class DashboardService {
       ${subQueryClause};
     `;
 
-    // Consulta de género (pregunta 30) - LÓGICA CORREGIDA
     const generoQuery = `
       SELECT o.texto_opcion AS genero, COUNT(r.id_respuesta) AS total
       FROM respuestas r
@@ -160,9 +146,6 @@ export class DashboardService {
       WHERE r.id_pregunta = 30
       ${subQueryClause.replace('WHERE', 'AND')} GROUP BY o.texto_opcion;
     `;
-
-    // Si subQueryClause está vacío, el replace no hace nada y la consulta es correcta.
-    // Si subQueryClause tiene "WHERE ...", se reemplaza con "AND ..." y la consulta es correcta.
 
     const [totalEncuestas] = await this.dataSource.query(
       totalEncuestasQuery,
@@ -250,10 +233,15 @@ export class DashboardService {
       }));
     } catch (error) {
       console.error('Error executing dynamic filter query:', error);
+      console.error('SQL:', mainQuery);
+      console.error('Params:', queryParams);
       throw error;
     }
   }
 
   // --- MÉTODOS OBSOLETOS ELIMINADOS ---
-  // getGraficosDemograficos y getPreferencias se han eliminado
+  // buildWhereClause
+  // buildQueryConditions
+  // getGraficosDemograficos
+  // getPreferencias
 }
