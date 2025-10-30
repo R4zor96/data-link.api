@@ -108,7 +108,6 @@ export class FiltersService {
     );
   }
 
-  // --- NUEVO MÉTODO ---
   async getQuestions(
     idEncuesta: number = 9,
   ): Promise<{ id_pregunta: number; texto_pregunta: string }[]> {
@@ -121,6 +120,22 @@ export class FiltersService {
         WHERE id_encuesta = ? 
         ORDER BY id_pregunta ASC;
      `,
+      params,
+    );
+  }
+
+  // --- MÉTODO NUEVO ---
+  async getOptionsForQuestion(
+    idPregunta: number,
+  ): Promise<{ id_opcion: string; texto_opcion: string }[]> {
+    const params = [idPregunta];
+    return this.dataSource.query(
+      `
+      SELECT id_opcion, texto_opcion 
+      FROM opciones 
+      WHERE id_pregunta = ? 
+      ORDER BY id_opcion ASC;
+    `,
       params,
     );
   }

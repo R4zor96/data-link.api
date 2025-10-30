@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Param, ParseIntPipe } from '@nestjs/common'; // Asegúrate de importar Param y ParseIntPipe
 import { FiltersService } from './filters.service';
 
 @Controller('filters')
@@ -36,10 +36,16 @@ export class FiltersController {
     return this.filtersService.getComunidades(idSeccion);
   }
 
-  // --- NUEVA RUTA ---
   @Get('questions')
   getQuestions(/* Podrías añadir @Query('id_encuesta') si necesitas filtrar */) {
     // Pasamos un ID de encuesta fijo por ahora
     return this.filtersService.getQuestions(9);
+  }
+  // --- RUTA NUEVA ---
+  @Get('options/:id_pregunta')
+  getOptionsForQuestion(
+    @Param('id_pregunta', ParseIntPipe) idPregunta: number,
+  ) {
+    return this.filtersService.getOptionsForQuestion(idPregunta);
   }
 }
