@@ -20,8 +20,7 @@ async function bootstrap() {
     }),
   );
 
-  // --- CONFIGURACIÓN DE SWAGGER SOLO PARA NO-PRODUCCIÓN ---
-  // Vercel define VERCEL_ENV como 'production' solo en el deploy de producción
+  // CONFIGURACIÓN DE SWAGGER SOLO PARA NO-PRODUCCIÓN 
   if (process.env.VERCEL_ENV !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('API de MONKQI')
@@ -29,10 +28,8 @@ async function bootstrap() {
       .setVersion('1.0')
       .build();
 
-    // 1. NO LA LLAMES 'document', llámala 'swaggerDocument'
     const swaggerDocument = SwaggerModule.createDocument(app, config);
 
-    // 2. Ahora pasa 'swaggerDocument' al setup
     SwaggerModule.setup(
       'api-docs',
       app,
