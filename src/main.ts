@@ -1,24 +1,40 @@
-// src/main.ts (en tu proyecto NestJS)
+// src/main.ts
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common'; // 👈 1. Asegúrate de importar ValidationPipe
+import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'; 
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 👇 2. AÑADE ESTE BLOQUE COMPLETO 👇
-  // Habilita la validación y transformación global de DTOs
+  // Configuración de ValidationPipe
   app.useGlobalPipes(new ValidationPipe({
-    transform: true, // <-- Esta es la línea mágica que faltaba
-    whitelist: true, // Opcional: elimina propiedades que no estén en el DTO
+    transform: true,
+    whitelist: true, 
     transformOptions: {
-      enableImplicitConversion: true, // Ayuda a convertir tipos
+      enableImplicitConversion: true,
     },
   }));
 
-  // 3. Tu configuración de CORS (está bien)
+  // --- CONFIGURACIÓN DE SWAGGER SOLO PARA NO-PRODUCCIÓN ---
+  // Vercel define VERCEL_ENV como 'production' solo en el deploy de producción
+  if (process.env.VERCEL_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('API de MONKQI') 
+      .setDescription('Documentación interactiva de la API')
+      .setVersion('1.0')
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api-docs', app, document);
+
+    // Este log solo aparecerá en desarrollo y preview
+    console.log(`📚 Documentación de Swagger disponible en: /api-docs`);
+  }
+
+  // Configuración de CORS
   const configService = app.get(ConfigService);
   const allowedOrigins = configService.get<string>('CORS_ORIGINS');
 
@@ -34,5 +50,7 @@ async function bootstrap() {
   }
 
   await app.listen(3000);
+  
+  console.log(`🚀 Aplicación corriendo en el puerto 3000`);
 }
 bootstrap();
