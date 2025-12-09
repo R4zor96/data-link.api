@@ -1,0 +1,37 @@
+service: datalink-api-lambda
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: mx-central-1 # REGION DE TU RDS (mx-central-1)
+  stage: dev
+  timeout: 30 # Tiempo de espera máximo para la función (en segundos)
+  environment:
+    # --- Variables de entorno para NestJS/TypeORM ---
+    DB_HOST: dbm.czg4mqgk00cl.mx-central-1.rds.amazonaws.com
+    DB_PORT: 3306
+    DB_USERNAME: admin_dbm
+    DB_PASSWORD: ${file(./.env.yml):DB_PASSWORD} # Usaremos un archivo para la contraseña
+    DB_DATABASE: dbm
+    CORS_ORIGINS: "*" # O tus dominios específicos (ej: 'http://localhost:4200, https://dashboard.datalink.com')
+    AWS_ENV: development # Para habilitar Swagger si quieres
+
+  # === CONFIGURACIÓN CRÍTICA DE RED PARA RDS ===
+  vpc:
+    # REEMPLAZA CON LOS IDs DE TUS GRUPOS DE SEGURIDAD
+    securityGroupIds: 
+      - sg-076ef61030c50d2b6
+    # REEMPLAZA CON LOS IDs DE TUS SUBNETS (TRES DE ELLAS)
+    subnetIds:
+      - subnet-00d1d0bfca5538d3a
+      - subnet-003db0e17ad7fe8e5
+      - subnet-07d083f7e9f3b2080
+
+functions:
+  api:
+    handler: dist/lambda.handler # Esto apunta a tu archivo 'lambda.js' y la función 'handler'
+    events:
+      - http:
+          path: /{proxy+} # Permite que todas las rutas se manejen a través de NestJS
+          method: any
+
